@@ -1,0 +1,116 @@
+--procedure to find name of pharmacist who made highest sale in input month
+set serveroutput on;
+create or replace procedure max_pharmacist(input_month in number, ph_name out varchar) IS
+
+begin
+	select phfname into ph_name from pharmacist natural join sales where total_amount = (select max(total_amount) from sales where extract(month from sale_date) = input_month);
+
+exception
+	when no_data_found then 
+		dbms_output.put_line('pharmacist not found');
+end max_pharmacist;
+/
+set serveroutput on;
+declare
+v_month number(2) := 4;
+ph_name pharmacist.phfname%TYPE;
+
+begin
+--v_month = '&v_month';
+max_pharmacist(v_month,ph_name);
+dbms_output.put_line(ph_name || ' made the most sales in ' || v_month);
+end;
+/
+
+--procedure to print all the names of customer who bought a particular medicine
+set serveroutput on;
+create or replace procedure name_med(medicine in varchar2) IS 
+cursor c_cur is select fname from sales natural join customer natural join medicines where med_category = medicine;
+begin
+dbms_output.put_line('People who bought ' || medicine || ' are ');
+for i in c_cur
+loop
+dbms_output.put_line(i.fname);
+end loop;
+end name_med;
+/
+
+set serveroutput on;
+declare
+med medicines.med_category%type := 'PARACETAMOL';
+begin
+name_med(med);
+end;
+/
+
+
+--Function TO CALCULATE TOTAL price of sales done by a particular pharmacist
+
+
+CREATE OR REPLACE function Total_Price(pharid IN Varchar2) return number as price number(6):=0; 
+Cursor c_ph is Select total_amount from sales where phar_id = pharid;
+begin
+for i in c_ph
+loop
+price := price + i.total_amount;
+end loop;
+
+return price;
+end Total_Price;
+/
+
+
+--INSERT INTO SALES VALUES('S15236007','P1528645612','C3651436716','M1357369839',7,'PU446148563', '29-AUG-2017',2400);
+
+set serveroutput on;
+declare
+id pharmacist.phar_id%type := 'P1528645612';
+price number(6);
+begin
+price := Total_Price(id);
+dbms_output.put_line('Total amount of medicines sold by pharmacist are : ' || price);
+end;
+/
+
+
+ 
+--design a trigger to be fired when customer's age is below 18
+
+create or replace trigger customer_age before insert or update on customer
+for each row 
+
+begin
+	if :new.age<18 then
+		raise_application_error(-20111, 'Customer should be older than 18 year');
+	else 
+	dbms_output.put_line('Successful');
+	end if;
+end;
+/
+
+INSERT INTO CUSTOMER VALUES('C6871368000','SWANA','KMARI','F',12,6982361230,'SWAPNA@GMAIL.COM', 'Swapna@3456');
+--trigger works properly
+
+--trigger to check password length
+
+create or replace trigger pass_length before insert on customer
+for each row
+begin
+if length(:new.cust_pass) <8 then
+	dbms_output.put_line('Incorrect password enter again');
+	raise_application_error(-20111,'Password must be atleast 8 length characters');
+end if;
+end;
+/
+INSERT INTO CUSTOMER VALUES('C6871368000','SWANA','KMARI','F',12,6982361230,'SWAPNA@GMAIL.COM', 'Swap@');
+
+
+create or replace trigger pass_length_admin before insert on pharmacist
+for each row
+begin
+if length(:new.admin_pass) <8 then
+	dbms_output.put_line('Incorrect password enter again');
+	raise_application_error(-20111,'Password must be atleast 8 length characters');
+end if;
+end;
+
